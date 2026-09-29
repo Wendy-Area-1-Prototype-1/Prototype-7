@@ -1,3 +1,8 @@
+/*
+This stylesheet keeps the garden static while the complete circular flower rotates
+for the full duration of its repeating sound.
+*/
+
 :root {
     --ink: #263832;
     --cream: #f5f1e7;
@@ -68,6 +73,7 @@ h1 {
     background: var(--garden);
 }
 
+/* The large circular target supports repeated mouse, touch and keyboard input. */
 .flower {
     display: grid;
     width: min(8rem, 50vw);
@@ -92,12 +98,14 @@ h1 {
 }
 
 /* Rotate the complete circular button so its border, face and flower move together. */
-.flower.is-playing {
+.flower.isPlaying {
     animation: flower-spin 6s linear infinite;
 }
 
 @keyframes flower-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .flower:focus-visible {
@@ -105,7 +113,7 @@ h1 {
     outline-offset: 7px;
 }
 
-.sound-status {
+.soundStatus {
     max-width: 100%;
     min-height: 3em;
     margin: 0;
@@ -127,7 +135,7 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .flower.is-playing {
+    .flower.isPlaying {
         animation-duration: 20s;
     }
 }

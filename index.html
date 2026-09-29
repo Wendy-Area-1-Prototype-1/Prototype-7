@@ -10,6 +10,10 @@
     <script src="script.js" defer></script>
 </head>
 <body>
+    <!--
+    This prototype tests whether continuous rotation clearly communicates that
+    the flower's repeating sound is currently playing.
+    -->
     <main class="prototype">
         <header class="intro">
             <p class="eyebrow">GARDEN OF SOUNDS</p>
@@ -18,8 +22,14 @@
         </header>
 
         <section class="garden" aria-label="Garden canvas">
-            <button id="flower" class="flower" type="button" aria-pressed="false"
-                    aria-label="Toggle flower sound" aria-describedby="instruction">
+            <button
+                id="flower"
+                class="flower"
+                type="button"
+                aria-pressed="false"
+                aria-label="Toggle flower sound"
+                aria-describedby="instruction"
+            >
                 <svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">
                     <g fill="currentColor">
                         <circle cx="60" cy="29" r="20" />
@@ -33,7 +43,7 @@
             </button>
         </section>
 
-        <p id="sound-status" class="sound-status" role="status" aria-atomic="true"></p>
+        <p id="sound-status" class="soundStatus" role="status" aria-atomic="true"></p>
         <noscript>Enable JavaScript to play the flower sound.</noscript>
     </main>
 </body>

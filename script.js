@@ -1,48 +1,60 @@
 "use strict";
 
-const flower = document.querySelector("#flower");
+/*
+This script uses one Tone.Loop for continuous sound and mirrors that playing state
+with continuous rotation. A second tap stops both parts of the test immediately.
+*/
+
+/* Page elements and state -------------------------------------------------- */
+const flowerButton = document.querySelector("#flower");
 const soundStatus = document.querySelector("#sound-status");
 const noteDuration = 0.28;
-let synth;
+let flowerSynth;
 let noteLoop;
 let isPlaying = false;
-let startingAudio = false;
-let wantsPlaying = false;
+let isAudioStarting = false;
+let shouldPlay = false;
 
+/* Playing-state control ---------------------------------------------------- */
 function stopSound() {
     // Mute first, then stop the one loop and cancel queued envelope changes.
-    if (synth) {
-        synth.volume.value = -100;
-        synth.envelope.cancel(Tone.immediate());
-        synth.triggerRelease(Tone.immediate());
+    if (flowerSynth) {
+        flowerSynth.volume.value = -100;
+        flowerSynth.envelope.cancel(Tone.immediate());
+        flowerSynth.triggerRelease(Tone.immediate());
     }
-    if (noteLoop) noteLoop.mute = true;
-    if (typeof Tone !== "undefined") Tone.Transport.stop();
+    if (noteLoop) {
+        noteLoop.mute = true;
+    }
+    if (typeof Tone !== "undefined") {
+        Tone.Transport.stop();
+    }
+
     isPlaying = false;
-    flower.classList.remove("is-playing");
-    flower.setAttribute("aria-pressed", "false");
+    flowerButton.classList.remove("isPlaying");
+    flowerButton.setAttribute("aria-pressed", "false");
     soundStatus.textContent = "Sound stopped";
 }
 
 async function startSound() {
-    // Keep only one in-flight audio unlock, even if taps arrive while it awaits.
-    if (startingAudio || isPlaying) return;
+    // One in-flight audio unlock prevents rapid taps from creating duplicate loops.
+    if (isAudioStarting || isPlaying) return;
     if (typeof Tone === "undefined") {
-        wantsPlaying = false;
+        shouldPlay = false;
         soundStatus.textContent = "Sound could not load. Check your connection and reload.";
         return;
     }
 
-    startingAudio = true;
+    isAudioStarting = true;
     try {
-        // Audio can start only after the first user gesture; retry on mobile resume.
+        // Browsers allow Tone.js audio only after the user's first activation.
         await Tone.start();
-        if (!wantsPlaying) return;
+        if (!shouldPlay) return;
         if (Tone.getContext().state !== "running") {
             throw new Error("Audio context did not start");
         }
-        if (!synth) {
-            synth = new Tone.Synth({
+        if (!flowerSynth) {
+            flowerSynth = new Tone.Synth({
                 oscillator: { type: "sine" },
                 envelope: {
                     attack: 0.025,
@@ -54,16 +66,21 @@ async function startSound() {
                 volume: -16
             }).toDestination();
             Tone.Transport.bpm.value = 75;
-            // One Tone.Loop repeats the same gentle note; it is never duplicated.
-            noteLoop = new Tone.Loop(time => {
-                if (isPlaying && wantsPlaying) {
-                    synth.triggerAttackRelease("C4", noteDuration, time, 0.65);
+            // One reusable Tone.Loop supplies the repeating playing state.
+            noteLoop = new Tone.Loop(scheduledTime => {
+                if (isPlaying && shouldPlay) {
+                    flowerSynth.triggerAttackRelease(
+                        "C4",
+                        noteDuration,
+                        scheduledTime,
+                        0.65
+                    );
                 }
             }, "4n").start("4n");
             Tone.getContext().rawContext.addEventListener("statechange", () => {
                 // A suspended audio context must not leave a silent flower spinning.
                 if (isPlaying && Tone.getContext().state !== "running") {
-                    wantsPlaying = false;
+                    shouldPlay = false;
                     stopSound();
                     soundStatus.textContent = "Audio paused. Tap the flower to play again.";
                 }
@@ -71,30 +88,32 @@ async function startSound() {
         }
 
         // Restore this one synth and loop; never create a second copy on restart.
-        synth.envelope.cancel(Tone.immediate());
-        synth.volume.value = -16;
+        flowerSynth.envelope.cancel(Tone.immediate());
+        flowerSynth.volume.value = -16;
         noteLoop.mute = false;
         Tone.Transport.position = 0;
-        synth.triggerAttackRelease("C4", noteDuration, Tone.immediate(), 0.65);
+        flowerSynth.triggerAttackRelease("C4", noteDuration, Tone.immediate(), 0.65);
         isPlaying = true;
         Tone.Transport.start();
-        // The spinning class mirrors the sound's playing state.
-        flower.classList.add("is-playing");
-        flower.setAttribute("aria-pressed", "true");
+
+        // The CSS class and aria-pressed value mirror the sound's playing state.
+        flowerButton.classList.add("isPlaying");
+        flowerButton.setAttribute("aria-pressed", "true");
         soundStatus.textContent = "Sound playing";
     } catch {
-        wantsPlaying = false;
+        shouldPlay = false;
         stopSound();
         soundStatus.textContent = "Sound could not start. Tap the flower to try again.";
     } finally {
-        startingAudio = false;
+        isAudioStarting = false;
     }
 }
 
-flower.addEventListener("click", () => {
+/* User input and accessibility -------------------------------------------- */
+flowerButton.addEventListener("click", () => {
     // Every tap reverses the requested state, including taps during audio startup.
-    wantsPlaying = !wantsPlaying;
-    if (wantsPlaying) {
+    shouldPlay = !shouldPlay;
+    if (shouldPlay) {
         void startSound();
     } else {
         stopSound();
@@ -102,15 +121,15 @@ flower.addEventListener("click", () => {
 });
 
 // Native button clicks cover mouse, touch, Enter and Space. A held key is one tap.
-flower.addEventListener("keydown", event => {
+flowerButton.addEventListener("keydown", event => {
     if (event.repeat && (event.key === "Enter" || event.key === " ")) {
         event.preventDefault();
     }
 });
 
 document.addEventListener("visibilitychange", () => {
-    if (document.hidden && wantsPlaying) {
-        wantsPlaying = false;
+    if (document.hidden && shouldPlay) {
+        shouldPlay = false;
         stopSound();
     }
 });
